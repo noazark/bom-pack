@@ -1,9 +1,10 @@
 import argparse
 import logging
 import ezdxf
+import os
 from typing import List, Dict
 
-from nester import SimpleNester
+from nester import SimpleNester, get_bin_utilization, get_bin_count
 from shapes import Shape, Bin, Rectangle
 from dxf_utils import extract_boundary_from_dxf, write_packed_shapes_to_dxf
 from bom_utils import read_bom_csv
@@ -22,7 +23,7 @@ def main():
         description="Pack shapes from DXF files listed in a BOM CSV into rectangles."
     )
     parser.add_argument("bom_file", help="Input BOM CSV file")
-    parser.add_argument("output_file", help="Output DXF file")
+    parser.add_argument("output_file", help="Base name for output DXF files")
     parser.add_argument(
         "-W", "--sheet-width", type=float, required=True, help="Sheet width"
     )
@@ -130,15 +131,15 @@ def main():
     logger.info("Packing complete. Results:")
     for bin_index, bin in enumerate(bins):
         logger.info(f"Bin {bin_index}:")
-        for placement_index, placement in enumerate(bin.placements):
-            shape = all_shapes[placement_index]
-            logger.info(f"  Shape {placement_index} ({shape.part.name}):")
+        for placement in bin.placements:
+            shape = all_shapes[placement.shape_index]
+            logger.info(f"  Shape {placement.shape_index} ({shape.part.name}):")
             logger.info(f"    Position: ({placement.x}, {placement.y})")
             logger.info(f"    Rotation: {placement.rotation}")
 
-    logger.info(f"Total bins used: {len(bins)}")
+    logger.info(f"Total bins used: {get_bin_count(bins)}")
     logger.info(
-        f"Bin utilization: {', '.join(f'{u*100:.2f}%' for u in nester.get_bin_utilization())}"
+        f"Bin utilization: {', '.join(f'{u*100:.2f}%' for u in get_bin_utilization(bins))}"
     )
 
     if args.material:
@@ -146,8 +147,12 @@ def main():
     if args.thickness:
         logger.info(f"Thickness: {args.thickness} mm")
 
-    write_packed_shapes_to_dxf(all_shapes, bins, args.output_file, args.debug)
-    logger.info(f"Packed shapes written to {args.output_file}")
+    # Write one DXF file per bin
+    base_name, ext = os.path.splitext(args.output_file)
+    for bin_index, bin in enumerate(bins):
+        output_file = f"{base_name}-{bin_index + 1}{ext}"
+        write_packed_shapes_to_dxf(bin, all_shapes, output_file, args.debug)
+        logger.info(f"Packed shapes for Bin {bin_index} written to {output_file}")
 
     if any(error_summary.values()):
         logger.warning(

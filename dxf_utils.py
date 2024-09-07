@@ -134,8 +134,8 @@ def normalize_entities(entities, min_x, min_y):
 
 
 def write_packed_shapes_to_dxf(
+    bin: Bin,
     shapes: List[Shape],
-    bins: List[Bin],
     output_file: str,
     debug: bool = False,
 ):
@@ -147,20 +147,19 @@ def write_packed_shapes_to_dxf(
 
     # Group shapes by part name
     shape_groups = {}
-    for bin_index, bin in enumerate(bins):
-        for placement_index, placement in enumerate(bin.placements):
-            shape = shapes[placement_index]
-            part_name = shape.part.name
-            if part_name not in shape_groups:
-                shape_groups[part_name] = []
-            shape_groups[part_name].append((shape, placement, bin_index))
+    for placement in bin.placements:
+        shape = shapes[placement.shape_index]
+        part_name = shape.part.name
+        if part_name not in shape_groups:
+            shape_groups[part_name] = []
+        shape_groups[part_name].append((shape, placement))
 
     # Process each group of shapes
     for part_name, group in shape_groups.items():
         # Add entities for each instance of this part type
-        for i, (shape, placement, bin_index) in enumerate(group, start=1):
+        for i, (shape, placement) in enumerate(group, start=1):
             # Create a layer name for this specific instance
-            layer_name = f"Bin{bin_index}_{part_name}_{i}"
+            layer_name = f"{part_name}_{i}"
             doc.layers.new(name=layer_name)
 
             for entity in shape.entities:
