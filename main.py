@@ -4,7 +4,10 @@ import ezdxf
 import os
 from typing import List, Dict
 
-from nester import SimpleNester, get_bin_utilization, get_bin_count
+from nesters.genetic import GeneticNester
+from nesters.simple import SimpleNester
+from nesters.skyline import SkylineNester
+from nesters.utils import get_bin_utilization, get_bin_count
 from shapes import Shape, Bin, Rectangle
 from dxf_utils import extract_boundary_from_dxf, write_packed_shapes_to_dxf
 from bom_utils import read_bom_csv
@@ -69,12 +72,10 @@ def main():
 
     logger.info(f"Processing BOM file: {args.bom_file}")
     nester_config = {
-        "bin_width": args.sheet_width,
-        "bin_height": args.sheet_height,
-        "rotation_steps": args.rotation_steps,
-        "allow_flip": args.allow_flip,
-        "sort_method": args.sort_method,
-        "placement_strategy": args.placement_strategy,
+        "bin_width": 1000,
+        "bin_height": 1000,
+        "rotation_steps": 8,
+        "allow_flip": True,
     }
 
     parts = read_bom_csv(args.bom_file)
