@@ -1,11 +1,20 @@
 import argparse
+import logging
 import ezdxf
 from typing import List, Dict
 
 from nester import SimpleNester
-from shapes import Shape, Rectangle, Part
+from shapes import Shape
 from dxf_utils import extract_boundary_from_dxf, write_packed_shapes_to_dxf
 from bom_utils import read_bom_csv
+
+
+def configure_logger(log_level: str):
+    log_level = getattr(logging, log_level.upper(), logging.INFO)
+    logging.basicConfig(level=log_level)
+    logger = logging.getLogger("bom-packer")
+    logger.setLevel(log_level)
+    return logger
 
 
 def main():
@@ -46,8 +55,18 @@ def main():
     parser.add_argument(
         "--debug", action="store_true", help="Enable debug mode (draw boundaries)"
     )
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        default="INFO",
+        help="Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
+    )
     args = parser.parse_args()
 
+    # Configure logging
+    logger = configure_logger(args.log_level)
+
+    logger.info(f"Processing BOM file: {args.bom_file}")
     nester_config = {
         "bin_width": args.sheet_width,
         "bin_height": args.sheet_height,
@@ -93,49 +112,49 @@ def main():
             error_summary["file_not_found"].append(f"{part.name} ({part.file_path})")
 
     if not all_shapes:
-        print("Error: No valid shapes found. Exiting.")
-        print("\nDetailed error summary:")
+        logger.error("No valid shapes found. Exiting.")
+        logger.error("Detailed error summary:")
         for error_type, errors in error_summary.items():
             if errors:
-                print(f"\n{error_type.replace('_', ' ').title()}:")
+                logger.error(f"{error_type.replace('_', ' ').title()}:")
                 for error in errors:
-                    print(f"  - {error}")
-        print(
-            "\nPlease check the BOM file and ensure all referenced DXF files exist and contain supported entities."
+                    logger.error(f"  - {error}")
+        logger.error(
+            "Please check the BOM file and ensure all referenced DXF files exist and contain supported entities."
         )
         return
 
     nester = SimpleNester(nester_config)
     placements = nester.nest([shape.rectangle for shape in all_shapes])
 
-    print("\nPacking complete. Results:")
+    logger.info("Packing complete. Results:")
     for i, (shape, placement) in enumerate(zip(all_shapes, placements)):
-        print(f"Shape {i} ({shape.part.name}):")
-        print(f"  Bin: {placement.bin_index}")
-        print(f"  Position: ({placement.x}, {placement.y})")
-        print(f"  Rotation: {placement.rotation}")
+        logger.info(f"Shape {i} ({shape.part.name}):")
+        logger.info(f"  Bin: {placement.bin_index}")
+        logger.info(f"  Position: ({placement.x}, {placement.y})")
+        logger.info(f"  Rotation: {placement.rotation}")
 
-    print(f"\nTotal bins used: {nester.get_bin_count()}")
-    print(
+    logger.info(f"Total bins used: {nester.get_bin_count()}")
+    logger.info(
         f"Bin utilization: {', '.join(f'{u*100:.2f}%' for u in nester.get_bin_utilization())}"
     )
 
     if args.material:
-        print(f"Material: {args.material}")
+        logger.info(f"Material: {args.material}")
     if args.thickness:
-        print(f"Thickness: {args.thickness} mm")
+        logger.info(f"Thickness: {args.thickness} mm")
 
     write_packed_shapes_to_dxf(all_shapes, placements, args.output_file, args.debug)
-    print(f"\nPacked shapes written to {args.output_file}")
+    logger.info(f"Packed shapes written to {args.output_file}")
 
     if any(error_summary.values()):
-        print(
-            "\nWarning: Some files were skipped or partially processed due to errors. See summary below:"
+        logger.warning(
+            "Warning: Some files were skipped or partially processed due to errors. See summary below:"
         )
         for error_type, errors in error_summary.items():
             if errors:
-                print(f"  - {len(errors)} {error_type.replace('_', ' ')}(s)")
-        print("Use the --verbose flag for more detailed information.")
+                logger.warning(f"  - {len(errors)} {error_type.replace('_', ' ')}(s)")
+        logger.warning("Use the --verbose flag for more detailed information.")
 
 
 if __name__ == "__main__":

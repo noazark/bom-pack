@@ -1,7 +1,11 @@
 import ezdxf
 import math
+import logging
 from typing import List, Tuple, Dict, Any
 from shapes import Rectangle, Shape, Placement
+
+# Configure the logger
+logger = logging.getLogger(__name__)
 
 
 def safe_vector_access(vector, index, default=0.0):
@@ -172,21 +176,21 @@ def copy_and_transform_entity(entity, target_layout, placement):
     if dxftype == "LINE":
         start = transform_point(entity.dxf.start, placement)
         end = transform_point(entity.dxf.end, placement)
-        print(
+        logger.debug(
             f"Transforming LINE from {entity.dxf.start}, {entity.dxf.end} to {start}, {end}"
         )
         return target_layout.add_line(start, end)
     elif dxftype == "LWPOLYLINE":
         points = [transform_point(p, placement) for p in entity.get_points()]
-        print(f"Transforming LWPOLYLINE points to {points}")
+        logger.debug(f"Transforming LWPOLYLINE points to {points}")
         return target_layout.add_lwpolyline(points)
     elif dxftype == "CIRCLE":
         center = transform_point(entity.dxf.center, placement)
-        print(f"Transforming CIRCLE center from {entity.dxf.center} to {center}")
+        logger.debug(f"Transforming CIRCLE center from {entity.dxf.center} to {center}")
         return target_layout.add_circle(center, entity.dxf.radius)
     elif dxftype == "ARC":
         center = transform_point(entity.dxf.center, placement)
-        print(f"Transforming ARC center from {entity.dxf.center} to {center}")
+        logger.debug(f"Transforming ARC center from {entity.dxf.center} to {center}")
         return target_layout.add_arc(
             center,
             entity.dxf.radius,
@@ -207,7 +211,7 @@ def transform_point(point, placement):
 
     # Apply translation
     transformed_point = (x_rot + placement.x, y_rot + placement.y)
-    print(
+    logger.debug(
         f"Transforming point {point} with placement {placement} to {transformed_point}"
     )
     return transformed_point
@@ -222,7 +226,7 @@ def draw_boundary(msp, rectangle: Rectangle, placement: Placement, layer_name: s
     ]
 
     transformed_points = [transform_point(p, placement) for p in points]
-    print(f"Drawing boundary with transformed points: {transformed_points}")
+    logger.debug(f"Drawing boundary with transformed points: {transformed_points}")
 
     msp.add_lwpolyline(
         transformed_points + [transformed_points[0]],
