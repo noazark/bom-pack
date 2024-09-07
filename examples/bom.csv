@@ -1,0 +1,5 @@
+name,file_path,qty
+foot,./foot.dxf,9
+bottom,./bottom.dxf,1
+side-a,./side-a.dxf,2
+side-b,./side-b.dxf,2
