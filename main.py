@@ -4,7 +4,7 @@ import ezdxf
 from typing import List, Dict
 
 from nester import SimpleNester
-from shapes import Shape
+from shapes import Shape, Bin, Rectangle
 from dxf_utils import extract_boundary_from_dxf, write_packed_shapes_to_dxf
 from bom_utils import read_bom_csv
 
@@ -125,16 +125,18 @@ def main():
         return
 
     nester = SimpleNester(nester_config)
-    placements = nester.nest([shape.rectangle for shape in all_shapes])
+    bins = nester.nest([shape.rectangle for shape in all_shapes])
 
     logger.info("Packing complete. Results:")
-    for i, (shape, placement) in enumerate(zip(all_shapes, placements)):
-        logger.info(f"Shape {i} ({shape.part.name}):")
-        logger.info(f"  Bin: {placement.bin_index}")
-        logger.info(f"  Position: ({placement.x}, {placement.y})")
-        logger.info(f"  Rotation: {placement.rotation}")
+    for bin_index, bin in enumerate(bins):
+        logger.info(f"Bin {bin_index}:")
+        for placement_index, placement in enumerate(bin.placements):
+            shape = all_shapes[placement_index]
+            logger.info(f"  Shape {placement_index} ({shape.part.name}):")
+            logger.info(f"    Position: ({placement.x}, {placement.y})")
+            logger.info(f"    Rotation: {placement.rotation}")
 
-    logger.info(f"Total bins used: {nester.get_bin_count()}")
+    logger.info(f"Total bins used: {len(bins)}")
     logger.info(
         f"Bin utilization: {', '.join(f'{u*100:.2f}%' for u in nester.get_bin_utilization())}"
     )
@@ -144,7 +146,7 @@ def main():
     if args.thickness:
         logger.info(f"Thickness: {args.thickness} mm")
 
-    write_packed_shapes_to_dxf(all_shapes, placements, args.output_file, args.debug)
+    write_packed_shapes_to_dxf(all_shapes, bins, args.output_file, args.debug)
     logger.info(f"Packed shapes written to {args.output_file}")
 
     if any(error_summary.values()):

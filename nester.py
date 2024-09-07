@@ -1,11 +1,11 @@
 from typing import List
-from shapes import Rectangle, Placement
+from shapes import Rectangle, Placement, Bin
 
 
 class SimpleNester:
     def __init__(self, config: dict):
         self.default_bin_size = Rectangle(config["bin_width"], config["bin_height"])
-        self.bins = [self.default_bin_size]
+        self.bins: List[Bin] = []
         self.config = {
             "rotation_steps": config.get("rotation_steps", 4),
             "allow_flip": config.get("allow_flip", True),
@@ -13,21 +13,9 @@ class SimpleNester:
             "placement_strategy": config.get("placement_strategy", "bottom_left"),
         }
 
-    def nest(self, shapes: List[Rectangle]) -> List[Placement]:
+    def nest(self, shapes: List[Rectangle]) -> List[Bin]:
         sorted_shapes = self.sort_shapes(shapes)
-        placements = []
-        spaces = [
-            [
-                Placement(
-                    0,
-                    0,
-                    self.default_bin_size.width,
-                    self.default_bin_size.height,
-                    0,
-                    0,
-                )
-            ]
-        ]
+        spaces = []
 
         for shape in sorted_shapes:
             best_placement = None
@@ -45,13 +33,14 @@ class SimpleNester:
                         best_bin_index = bin_index
 
             if best_placement:
-                placements.append(best_placement)
+                self.bins[best_bin_index].placements.append(best_placement)
                 self.update_spaces(
                     spaces[best_bin_index], best_space_index, best_placement
                 )
             else:
-                new_bin_index = len(self.bins)
-                self.bins.append(self.default_bin_size)
+                new_bin = Bin(self.default_bin_size.width, self.default_bin_size.height)
+                self.bins.append(new_bin)
+                new_bin_index = len(self.bins) - 1
                 spaces.append(
                     [
                         Placement(
@@ -60,7 +49,6 @@ class SimpleNester:
                             self.default_bin_size.width,
                             self.default_bin_size.height,
                             0,
-                            new_bin_index,
                         )
                     ]
                 )
@@ -69,14 +57,14 @@ class SimpleNester:
                     shape, spaces[new_bin_index][0]
                 )
                 if new_placement:
-                    placements.append(new_placement)
+                    new_bin.placements.append(new_placement)
                     self.update_spaces(spaces[new_bin_index], 0, new_placement)
                 else:
                     print(
                         f"Warning: Unable to place shape even in a new bin: {shape.__dict__}"
                     )
 
-        return placements
+        return self.bins
 
     def sort_shapes(self, shapes: List[Rectangle]) -> List[Rectangle]:
         if self.config["sort_method"] == "area":
@@ -106,8 +94,7 @@ class SimpleNester:
                         space.y,
                         width,
                         height,
-                        rotation,  # Remove the "+ 90 if flip" part
-                        space.bin_index,
+                        rotation,
                     )
 
                     if self.is_better_placement(placement, best_placement):
@@ -146,9 +133,8 @@ class SimpleNester:
                     used_space.x + placement.width,
                     used_space.y,
                     used_space.width - placement.width,
-                    placement.height,  # Change this line
+                    placement.height,
                     0,
-                    placement.bin_index,
                 )
             )
 
@@ -158,10 +144,9 @@ class SimpleNester:
                 Placement(
                     used_space.x,
                     used_space.y + placement.height,
-                    placement.width,  # Change this line
+                    placement.width,
                     used_space.height - placement.height,
                     0,
-                    placement.bin_index,
                 )
             )
 
@@ -173,11 +158,9 @@ class SimpleNester:
 
     def get_bin_utilization(self) -> List[float]:
         return [
-            self.calculate_used_area(i) / (bin.width * bin.height)
-            for i, bin in enumerate(self.bins)
+            self.calculate_used_area(bin) / (bin.width * bin.height)
+            for bin in self.bins
         ]
 
-    def calculate_used_area(self, bin_index: int) -> float:
-        return sum(
-            p.width * p.height for p in self.nest([]) if p.bin_index == bin_index
-        )
+    def calculate_used_area(self, bin: Bin) -> float:
+        return sum(p.width * p.height for p in bin.placements)
