@@ -48,7 +48,10 @@ def extract_boundary_from_dxf(
     max_y = max(p[1] for p in all_points)
     boundary = Rectangle(max_x - min_x, max_y - min_y)
 
-    return boundary, all_entities, summary
+    # Normalize the entities to the origin
+    normalized_entities = normalize_entities(all_entities, min_x, min_y)
+
+    return boundary, normalized_entities, summary
 
 
 def get_entity_points(entity):
@@ -99,6 +102,33 @@ def get_entity_points(entity):
         return [start_point, end_point, center]
 
 
+def normalize_entities(entities, min_x, min_y):
+    normalized_entities = []
+    for entity in entities:
+        dxftype = entity.dxftype()
+        if dxftype == "LINE":
+            entity.dxf.start = (
+                entity.dxf.start[0] - min_x,
+                entity.dxf.start[1] - min_y,
+            )
+            entity.dxf.end = (entity.dxf.end[0] - min_x, entity.dxf.end[1] - min_y)
+        elif dxftype == "LWPOLYLINE":
+            points = [(p[0] - min_x, p[1] - min_y) for p in entity.get_points()]
+            entity.set_points(points)
+        elif dxftype == "CIRCLE":
+            entity.dxf.center = (
+                entity.dxf.center[0] - min_x,
+                entity.dxf.center[1] - min_y,
+            )
+        elif dxftype == "ARC":
+            entity.dxf.center = (
+                entity.dxf.center[0] - min_x,
+                entity.dxf.center[1] - min_y,
+            )
+        normalized_entities.append(entity)
+    return normalized_entities
+
+
 def write_packed_shapes_to_dxf(
     shapes: List[Shape],
     placements: List[Placement],
@@ -107,6 +137,9 @@ def write_packed_shapes_to_dxf(
 ):
     doc = ezdxf.new()
     msp = doc.modelspace()
+
+    # Set units to millimeters
+    doc.header["$INSUNITS"] = 4
 
     # Group shapes by part name
     shape_groups = {}
@@ -125,8 +158,7 @@ def write_packed_shapes_to_dxf(
             doc.layers.new(name=layer_name)
 
             for entity in shape.entities:
-                new_entity = copy_entity(entity, msp)
-                transform_entity(new_entity, placement)
+                new_entity = copy_and_transform_entity(entity, msp, placement)
                 new_entity.dxf.layer = layer_name
 
             if debug:
@@ -135,72 +167,50 @@ def write_packed_shapes_to_dxf(
     doc.saveas(output_file)
 
 
-def copy_entity(entity, target_layout):
+def copy_and_transform_entity(entity, target_layout, placement):
     dxftype = entity.dxftype()
     if dxftype == "LINE":
-        return target_layout.add_line(
-            start=(
-                safe_vector_access(entity.dxf.start, 0),
-                safe_vector_access(entity.dxf.start, 1),
-            ),
-            end=(
-                safe_vector_access(entity.dxf.end, 0),
-                safe_vector_access(entity.dxf.end, 1),
-            ),
+        start = transform_point(entity.dxf.start, placement)
+        end = transform_point(entity.dxf.end, placement)
+        print(
+            f"Transforming LINE from {entity.dxf.start}, {entity.dxf.end} to {start}, {end}"
         )
+        return target_layout.add_line(start, end)
     elif dxftype == "LWPOLYLINE":
-        return target_layout.add_lwpolyline(entity.get_points())
+        points = [transform_point(p, placement) for p in entity.get_points()]
+        print(f"Transforming LWPOLYLINE points to {points}")
+        return target_layout.add_lwpolyline(points)
     elif dxftype == "CIRCLE":
-        return target_layout.add_circle(
-            center=(
-                safe_vector_access(entity.dxf.center, 0),
-                safe_vector_access(entity.dxf.center, 1),
-            ),
-            radius=entity.dxf.radius,
-        )
+        center = transform_point(entity.dxf.center, placement)
+        print(f"Transforming CIRCLE center from {entity.dxf.center} to {center}")
+        return target_layout.add_circle(center, entity.dxf.radius)
     elif dxftype == "ARC":
+        center = transform_point(entity.dxf.center, placement)
+        print(f"Transforming ARC center from {entity.dxf.center} to {center}")
         return target_layout.add_arc(
-            center=(
-                safe_vector_access(entity.dxf.center, 0),
-                safe_vector_access(entity.dxf.center, 1),
-            ),
-            radius=entity.dxf.radius,
-            start_angle=entity.dxf.start_angle,
-            end_angle=entity.dxf.end_angle,
+            center,
+            entity.dxf.radius,
+            entity.dxf.start_angle + placement.rotation,
+            entity.dxf.end_angle + placement.rotation,
         )
     else:
         raise ValueError(f"Unsupported entity type: {dxftype}")
 
 
-def transform_entity(entity, placement):
-    rotation_rad = math.radians(placement.rotation)
-    cos_rot = math.cos(rotation_rad)
-    sin_rot = math.sin(rotation_rad)
-
-    if entity.dxftype() == "LINE":
-        entity.dxf.start = transform_point(
-            entity.dxf.start, placement, cos_rot, sin_rot
-        )
-        entity.dxf.end = transform_point(entity.dxf.end, placement, cos_rot, sin_rot)
-    elif entity.dxftype() == "LWPOLYLINE":
-        new_points = [
-            transform_point(p, placement, cos_rot, sin_rot) for p in entity.get_points()
-        ]
-        entity.set_points(new_points)
-    elif entity.dxftype() in ["CIRCLE", "ARC"]:
-        entity.dxf.center = transform_point(
-            entity.dxf.center, placement, cos_rot, sin_rot
-        )
-        if entity.dxftype() == "ARC":
-            entity.dxf.start_angle += placement.rotation
-            entity.dxf.end_angle += placement.rotation
-
-
-def transform_point(point, placement, cos_rot, sin_rot):
+def transform_point(point, placement):
     x, y = safe_vector_access(point, 0), safe_vector_access(point, 1)
-    x_rot = x * cos_rot - y * sin_rot
-    y_rot = x * sin_rot + y * cos_rot
-    return (x_rot + placement.x, y_rot + placement.y)
+
+    # Apply rotation
+    rotation_rad = math.radians(placement.rotation)
+    x_rot = x * math.cos(rotation_rad) - y * math.sin(rotation_rad)
+    y_rot = x * math.sin(rotation_rad) + y * math.cos(rotation_rad)
+
+    # Apply translation
+    transformed_point = (x_rot + placement.x, y_rot + placement.y)
+    print(
+        f"Transforming point {point} with placement {placement} to {transformed_point}"
+    )
+    return transformed_point
 
 
 def draw_boundary(msp, rectangle: Rectangle, placement: Placement, layer_name: str):
@@ -209,17 +219,12 @@ def draw_boundary(msp, rectangle: Rectangle, placement: Placement, layer_name: s
         (rectangle.width, 0),
         (rectangle.width, rectangle.height),
         (0, rectangle.height),
-        (0, 0),
     ]
 
-    transformed_points = [
-        transform_point(
-            p,
-            placement,
-            math.cos(math.radians(placement.rotation)),
-            math.sin(math.radians(placement.rotation)),
-        )
-        for p in points
-    ]
+    transformed_points = [transform_point(p, placement) for p in points]
+    print(f"Drawing boundary with transformed points: {transformed_points}")
 
-    msp.add_lwpolyline(transformed_points, dxfattribs={"layer": f"DEBUG_{layer_name}"})
+    msp.add_lwpolyline(
+        transformed_points + [transformed_points[0]],
+        dxfattribs={"layer": f"DEBUG_{layer_name}"},
+    )
