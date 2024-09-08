@@ -7,7 +7,7 @@ from typing import List, Dict
 from .nesters.rect import RectNester
 from .nesters.utils import get_bin_utilization, get_bin_count
 from .shapes import Shape, Bin, Rectangle
-from .dxf_utils import extract_boundary_from_dxf, write_packed_shapes_to_dxf
+from .dxf.io import extract_boundary_from_dxf, write_packed_shapes_to_dxf
 from .bom_utils import read_bom_csv
 
 
@@ -45,6 +45,13 @@ def main():
         action="count",
         default=0,
         help="Increase verbosity (can be used multiple times, e.g. -vvv)",
+    )
+    parser.add_argument(
+        "-m",
+        "--margin",
+        type=float,
+        default=0.125,
+        help="Margin/kerf to apply around each shape (default: 0.125)",
     )
 
     args = parser.parse_args()
@@ -84,7 +91,7 @@ def main():
     for part in parts:
         try:
             rectangle, entities, summary = extract_boundary_from_dxf(
-                part.file_path, 0.125
+                part.file_path, args.margin
             )
             if rectangle is None:
                 error_summary["no_valid_entities"].append(
