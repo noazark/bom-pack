@@ -73,9 +73,9 @@ def main():
 
     logger.info(f"Processing BOM file: {args.bom_file}")
     nester_config = {
-        "bin_width": 300,
-        "bin_height": 300,
-        "allow_rotate": True,
+        "bin_width": args.sheet_width,
+        "bin_height": args.sheet_height,
+        "allow_rotate": args.allow_flip,
     }
 
     parts = read_bom_csv(args.bom_file)

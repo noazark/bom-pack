@@ -10,14 +10,13 @@ class RectNester:
     def __init__(self, config: dict):
         self.default_bin_size = Rectangle(config["bin_width"], config["bin_height"])
         self.config = {
-            "allow_rotate": config.get("allow_rotate", True),
+            "allow_rotate": config.get("allow_rotate", False),
             "sort_algo": config.get("sort_algo", SORT_AREA),
         }
 
     def nest(self, shapes: List[Rectangle]) -> List[Bin]:
         packer = newPacker(
             mode=PackingMode.Offline,
-            bin_algo=PackingBin.Global,
             sort_algo=self.config["sort_algo"],
             rotation=self.config["allow_rotate"],
         )
@@ -53,7 +52,7 @@ class RectNester:
                     rect.y,
                     rect.width,
                     rect.height,
-                    90 if is_rotated else 0,
+                    0,
                 )
                 placement.shape_index = rect.rid
                 new_bin.placements.append(placement)
