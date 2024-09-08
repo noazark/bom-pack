@@ -21,4 +21,4 @@ build-backend = "pdm.backend"
 distribution = true
 
 [project.scripts]
-bom = "bom_packer.main:main"
+bom = "bom_packer.cli:main"

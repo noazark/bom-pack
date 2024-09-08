@@ -1,5 +1,5 @@
 from typing import List
-from ..shapes import Bin
+from bom_packer.shapes import Bin
 
 
 def get_bin_count(bins: List[Bin]) -> int:

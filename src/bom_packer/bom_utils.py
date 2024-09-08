@@ -1,7 +1,7 @@
 import csv
 import os
 from typing import List
-from .shapes import Part
+from bom_packer.shapes import Part
 
 
 def read_bom_csv(filename: str) -> List[Part]:

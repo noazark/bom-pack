@@ -3,7 +3,7 @@ import logging
 
 from rectpack import newPacker, PackingMode, PackingBin, SORT_AREA
 
-from ..shapes import Rectangle, Placement, Bin
+from bom_packer.shapes import Rectangle, Placement, Bin
 
 logger = logging.getLogger(__name__)
 

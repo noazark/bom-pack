@@ -2,9 +2,9 @@ import ezdxf
 import math
 import logging
 from typing import List, Tuple, Dict, Any
-from ..shapes import Rectangle, Shape, Placement, Bin
-from .entity_handlers import get_handler
-from .utils import transform_point, safe_vector_access
+from bom_packer.shapes import Rectangle, Shape, Placement, Bin
+from bom_packer.dxf.entity_handlers import get_handler
+from bom_packer.dxf.utils import transform_point, safe_vector_access
 
 # Configure the logger
 logger = logging.getLogger(__name__)
