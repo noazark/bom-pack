@@ -4,14 +4,11 @@ import ezdxf
 import os
 from typing import List, Dict
 
-from nesters.genetic import GeneticNester
-from nesters.rect import RectNester
-from nesters.simple import SimpleNester
-from nesters.skyline import SkylineNester
-from nesters.utils import get_bin_utilization, get_bin_count
-from shapes import Shape, Bin, Rectangle
-from dxf_utils import extract_boundary_from_dxf, write_packed_shapes_to_dxf
-from bom_utils import read_bom_csv
+from .nesters.rect import RectNester
+from .nesters.utils import get_bin_utilization, get_bin_count
+from .shapes import Shape, Bin, Rectangle
+from .dxf_utils import extract_boundary_from_dxf, write_packed_shapes_to_dxf
+from .bom_utils import read_bom_csv
 
 
 def configure_logger(log_level: str):

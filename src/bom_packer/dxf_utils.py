@@ -2,7 +2,7 @@ import ezdxf
 import math
 import logging
 from typing import List, Tuple, Dict, Any
-from shapes import Rectangle, Shape, Placement, Bin
+from .shapes import Rectangle, Shape, Placement, Bin
 
 # Configure the logger
 logger = logging.getLogger(__name__)
