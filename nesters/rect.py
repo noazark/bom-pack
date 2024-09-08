@@ -1,6 +1,7 @@
 from typing import List
 from shapes import Rectangle, Placement, Bin
 from rectpack import newPacker, PackingMode, PackingBin, SORT_AREA
+from rectpack.guillotine import GuillotineBssfSas
 import logging
 
 logger = logging.getLogger(__name__)
@@ -10,13 +11,14 @@ class RectNester:
     def __init__(self, config: dict):
         self.default_bin_size = Rectangle(config["bin_width"], config["bin_height"])
         self.config = {
-            "allow_rotate": config.get("allow_rotate", False),
+            "allow_rotate": config.get("allow_rotate", True),
             "sort_algo": config.get("sort_algo", SORT_AREA),
         }
 
     def nest(self, shapes: List[Rectangle]) -> List[Bin]:
         packer = newPacker(
             mode=PackingMode.Offline,
+            # pack_algo=GuillotineBssfSas,
             sort_algo=self.config["sort_algo"],
             rotation=self.config["allow_rotate"],
         )

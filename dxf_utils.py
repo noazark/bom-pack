@@ -16,7 +16,7 @@ def safe_vector_access(vector, index, default=0.0):
 
 
 def extract_boundary_from_dxf(
-    filename: str, verbose: bool = False
+    filename: str, margin: float = 0.0, verbose: bool = False
 ) -> Tuple[Rectangle, List[ezdxf.entities.DXFEntity], Dict[str, Any]]:
     doc = ezdxf.readfile(filename)
     msp = doc.modelspace()
@@ -45,14 +45,14 @@ def extract_boundary_from_dxf(
         except Exception as e:
             summary["errors"].append(str(e))
 
-    # Calculate the bounding rectangle
-    min_x = min(p[0] for p in all_points)
-    min_y = min(p[1] for p in all_points)
-    max_x = max(p[0] for p in all_points)
-    max_y = max(p[1] for p in all_points)
+    # Calculate the bounding rectangle with margin
+    min_x = min(p[0] for p in all_points) - margin
+    min_y = min(p[1] for p in all_points) - margin
+    max_x = max(p[0] for p in all_points) + margin
+    max_y = max(p[1] for p in all_points) + margin
     boundary = Rectangle(max_x - min_x, max_y - min_y)
 
-    # Normalize the entities to the origin
+    # Normalize the entities to the origin, considering the margin
     normalized_entities = normalize_entities(all_entities, min_x, min_y)
 
     return boundary, normalized_entities, summary

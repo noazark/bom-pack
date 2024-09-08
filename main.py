@@ -90,7 +90,7 @@ def main():
     for part in parts:
         try:
             rectangle, entities, summary = extract_boundary_from_dxf(
-                part.file_path, args.verbose
+                part.file_path, 0.125, args.verbose
             )
             if rectangle is None:
                 error_summary["no_valid_entities"].append(
