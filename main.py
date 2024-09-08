@@ -5,6 +5,7 @@ import os
 from typing import List, Dict
 
 from nesters.genetic import GeneticNester
+from nesters.rect import RectNester
 from nesters.simple import SimpleNester
 from nesters.skyline import SkylineNester
 from nesters.utils import get_bin_utilization, get_bin_count
@@ -72,10 +73,9 @@ def main():
 
     logger.info(f"Processing BOM file: {args.bom_file}")
     nester_config = {
-        "bin_width": 1000,
-        "bin_height": 1000,
-        "rotation_steps": 8,
-        "allow_flip": True,
+        "bin_width": 300,
+        "bin_height": 300,
+        "allow_rotate": True,
     }
 
     parts = read_bom_csv(args.bom_file)
@@ -126,7 +126,7 @@ def main():
         )
         return
 
-    nester = SimpleNester(nester_config)
+    nester = RectNester(nester_config)
     bins = nester.nest([shape.rectangle for shape in all_shapes])
 
     logger.info("Packing complete. Results:")

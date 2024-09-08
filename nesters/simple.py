@@ -65,6 +65,7 @@ class SimpleNester:
     ) -> Optional[Placement]:
         best_placement = None
         rotations = 360 / self.config["rotation_steps"]
+        step_size = max(1, min(int(shape.width / 2), int(shape.height / 2)))
 
         for r in range(self.config["rotation_steps"]):
             rotation = r * rotations
@@ -75,11 +76,27 @@ class SimpleNester:
                 height = shape.width if flip else shape.height
 
                 if width <= space.width and height <= space.height:
-                    placement = Placement(space.x, space.y, width, height, rotation)
-                    if not best_placement or self.is_better_placement(
-                        placement, best_placement
+                    # Try different positions within the available space, using a step size
+                    for x in range(
+                        int(space.x), int(space.x + space.width - width + 1), step_size
                     ):
-                        best_placement = placement
+                        for y in range(
+                            int(space.y),
+                            int(space.y + space.height - height + 1),
+                            step_size,
+                        ):
+                            placement = Placement(x, y, width, height, rotation)
+                            if self.is_valid_placement(space, placement):
+                                if not best_placement or self.is_better_placement(
+                                    placement, best_placement
+                                ):
+                                    best_placement = placement
+                                    # If using bottom-left strategy, return the first valid placement
+                                    if (
+                                        self.config["placement_strategy"]
+                                        == "bottom_left"
+                                    ):
+                                        return best_placement
 
         return best_placement
 
@@ -137,15 +154,20 @@ class SimpleNester:
         if not current:
             return True
         if self.config["placement_strategy"] == "bottom_left":
-            return new.y < current.y or (new.y == current.y and new.x < current.x)
-        elif self.config["placement_strategy"] == "best_short_side":
-            new_short = min(new.width, new.height)
-            current_short = min(current.width, current.height)
-            return new_short > current_short
-        elif self.config["placement_strategy"] == "best_long_side":
-            new_long = max(new.width, new.height)
-            current_long = max(current.width, current.height)
-            return new_long > current_long
+            return (new.y < current.y) or (new.y == current.y and new.x < current.x)
+        elif self.config["placement_strategy"] == "best_fit":
+            new_waste = (
+                self.default_bin_size.width - new.x - new.width
+            ) * new.height + (
+                self.default_bin_size.height - new.y - new.height
+            ) * new.width
+            current_waste = (
+                self.default_bin_size.width - current.x - current.width
+            ) * current.height + (
+                self.default_bin_size.height - current.y - current.height
+            ) * current.width
+            return new_waste < current_waste
+        # Add more placement strategies as needed
 
     def sort_shapes(
         self, indexed_shapes: List[Tuple[int, Rectangle]]

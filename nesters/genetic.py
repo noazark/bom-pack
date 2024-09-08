@@ -5,7 +5,6 @@ import multiprocessing as mp
 
 from shapes import Rectangle, Placement, Bin
 
-logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
 
 
