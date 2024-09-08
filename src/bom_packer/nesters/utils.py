@@ -11,4 +11,4 @@ def get_bin_utilization(bins: List[Bin]) -> List[float]:
 
 
 def calculate_used_area(bin: Bin) -> float:
-    return sum(p.width * p.height for p in bin.placements)
+    return sum(p.part.width * p.part.height for p in bin.placements)
