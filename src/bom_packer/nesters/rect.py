@@ -48,7 +48,6 @@ class RectNester:
                     rect.width != original_shape.width
                     or rect.height != original_shape.height
                 )
-                print(rect.rid, rect.x, rect.y, is_rotated)
                 placement = Placement(
                     rect.x,
                     rect.y,

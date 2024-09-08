@@ -32,41 +32,38 @@ def main():
         "-H", "--sheet-height", type=float, required=True, help="Sheet height"
     )
     parser.add_argument(
-        "--rotation-steps", type=int, default=4, help="Number of rotation steps"
-    )
-    parser.add_argument(
         "--allow-flip", action="store_true", help="Allow flipping shapes"
     )
     parser.add_argument(
-        "--sort-method",
-        choices=["area", "height", "width", "perimeter"],
-        default="area",
-        help="Method to sort shapes",
+        "--draw-boundaries",
+        action="store_true",
+        help="Enable debug mode (draw boundaries)",
     )
     parser.add_argument(
-        "--placement-strategy",
-        choices=["bottom_left", "best_short_side", "best_long_side"],
-        default="bottom_left",
-        help="Strategy for placing shapes",
+        "-v",
+        "--verbose",
+        action="count",
+        default=0,
+        help="Increase verbosity (can be used multiple times, e.g. -vvv)",
     )
-    parser.add_argument("--material", type=str, help="Material of the sheet")
-    parser.add_argument("--thickness", type=float, help="Thickness of the sheet")
-    parser.add_argument(
-        "-v", "--verbose", action="store_true", help="Enable verbose output"
-    )
-    parser.add_argument(
-        "--debug", action="store_true", help="Enable debug mode (draw boundaries)"
-    )
-    parser.add_argument(
-        "--log-level",
-        type=str,
-        default="INFO",
-        help="Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
-    )
+
     args = parser.parse_args()
 
+    # Map verbosity count to logging level
+    verbosity_to_log_level = {
+        0: logging.ERROR,
+        1: logging.WARNING,
+        2: logging.INFO,
+        3: logging.DEBUG,
+    }
+
+    # Get the log level, defaulting to WARNING if verbosity is higher than expected
+    log_level = verbosity_to_log_level.get(args.verbose, logging.DEBUG)
+
     # Configure logging
-    logger = configure_logger(args.log_level)
+    logging.basicConfig(level=log_level)
+    logger = logging.getLogger("bom-packer")
+    logger.setLevel(log_level)
 
     logger.info(f"Processing BOM file: {args.bom_file}")
     nester_config = {
@@ -87,7 +84,7 @@ def main():
     for part in parts:
         try:
             rectangle, entities, summary = extract_boundary_from_dxf(
-                part.file_path, 0.125, args.verbose
+                part.file_path, 0.125
             )
             if rectangle is None:
                 error_summary["no_valid_entities"].append(
@@ -140,16 +137,11 @@ def main():
         f"Bin utilization: {', '.join(f'{u*100:.2f}%' for u in get_bin_utilization(bins))}"
     )
 
-    if args.material:
-        logger.info(f"Material: {args.material}")
-    if args.thickness:
-        logger.info(f"Thickness: {args.thickness} mm")
-
     # Write one DXF file per bin
     base_name, ext = os.path.splitext(args.output_file)
     for bin_index, bin in enumerate(bins):
         output_file = f"{base_name}-{bin_index + 1}{ext}"
-        write_packed_shapes_to_dxf(bin, all_shapes, output_file, args.debug)
+        write_packed_shapes_to_dxf(bin, all_shapes, output_file, args.draw_boundaries)
         logger.info(f"Packed shapes for Bin {bin_index} written to {output_file}")
 
     if any(error_summary.values()):
@@ -159,7 +151,6 @@ def main():
         for error_type, errors in error_summary.items():
             if errors:
                 logger.warning(f"  - {len(errors)} {error_type.replace('_', ' ')}(s)")
-        logger.warning("Use the --verbose flag for more detailed information.")
 
 
 if __name__ == "__main__":

@@ -16,7 +16,7 @@ def safe_vector_access(vector, index, default=0.0):
 
 
 def extract_boundary_from_dxf(
-    filename: str, margin: float = 0.0, verbose: bool = False
+    filename: str, margin: float = 0.0
 ) -> Tuple[Rectangle, List[ezdxf.entities.DXFEntity], Dict[str, Any]]:
     doc = ezdxf.readfile(filename)
     msp = doc.modelspace()
